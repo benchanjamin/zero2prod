@@ -1,0 +1,17 @@
+application:
+  host: 0.0.0.0
+  # The current value "http://127.0.0.1" is problematic for production because:
+  #
+  #
+  #Inside Docker, this refers to the container's localhost, not the host machine
+  #For subscription emails, users would receive links pointing to 127.0.0.1 which won't work
+  #Correct Configuration
+  #For production, base_url should be set to the actual public URL where users access your application, such as:
+    #base_url: "https://yourdomain.com"
+
+  base_url: "http://127.0.0.1"
+database:
+  require_ssl: true
+email_client:
+  base_url: "https://api.postmarkapp.com"
+  sender_email: "ben@thealphaplay.com"

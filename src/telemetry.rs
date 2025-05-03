@@ -1,3 +1,4 @@
+use tokio::task::JoinHandle;
 use tracing::{subscriber::set_global_default, Subscriber};
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
@@ -11,9 +12,9 @@ use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 /// We are using `impl Subscriber` as return type to avoid having to
 /// spell out the actual type of the returned subscriber, which is
 /// indeed quite complex.
-/// We need to explicitly call out that the returned subscriber is
-/// `Send` and `Sync` to make it possible to pass it to `init_subscriber`
-/// later on.
+/// We need to explicitly call out that the returned subscriber implements
+/// the `Send` and `Sync` traits to make it possible to pass it to
+/// `init_subscriber` later on.
 pub fn get_subscriber<Sink>(
     name: String,
     env_filter: String,
@@ -51,4 +52,20 @@ pub fn init_subscriber(subscriber: impl Subscriber + Send + Sync) {
     // `set_global_default` can be used by applications to specify
     // what subscriber should be used to process spans.
     set_global_default(subscriber).expect("Failed to set subscriber");
+}
+
+// Just copied trait bounds and signature from `spawn_blocking`
+pub fn spawn_blocking_with_tracing<F, R>(f: F) -> JoinHandle<R>
+where
+    F: FnOnce() -> R + Send + 'static,
+    R: Send + 'static,
+{
+    // This executes before spawning the new thread
+    let current_span = tracing::Span::current();
+
+    tokio::task::spawn_blocking(move ||
+        // We then pass ownership to it into the closure
+        // and explicitly executes all our computation
+        // within its scope.
+        current_span.in_scope(f))
 }
